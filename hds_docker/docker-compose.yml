@@ -1,0 +1,131 @@
+---
+version: '3.6'
+services:
+  # The environment variable "TAG" is used throughout this file to
+  # specify the version of the images to run. The default is set in the
+  # '.env' file in this folder. It can be overridden with any normal
+  # technique for setting environment variables, for example:
+  #
+  #   TAG=6.0.0-beta1 docker-compose up
+  #
+  # REF: https://docs.docker.com/compose/compose-file/#variable-substitution
+  #
+  # Also be sure to set the ELASTIC_VERSION variable. For released versions,
+  # ${TAG} and ${ELASTIC_VERSION} will be identical, but for pre-release
+  # versions, ${TAG} might contain an extra build identifier, like
+  # "6.0.0-beta1-3eab5b40", so a full invocation might look like:
+  #
+  #   ELASTIC_VERSION=6.0.0-beta1 TAG=6.0.0-beta1-3eab5b40 docker-compose up
+  #
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${TAG}
+    container_name: elasticsearch
+    secrets:
+      - source: ca.crt
+        target: /usr/share/elasticsearch/config/certs/ca/ca.crt
+      - source: elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+      - source: elasticsearch.keystore
+        target: /usr/share/elasticsearch/config/elasticsearch.keystore
+      - source: elasticsearch.key
+        target: /usr/share/elasticsearch/config/certs/elasticsearch/elasticsearch.key
+      - source: elasticsearch.crt
+        target: /usr/share/elasticsearch/config/certs/elasticsearch/elasticsearch.crt
+    ports: ['9200:9200']
+    networks: ['stack']
+    volumes:
+      - 'es_data:/usr/share/elasticsearch/data'
+      - './scripts/setup-users.sh:/usr/local/bin/setup-users.sh:ro'
+    healthcheck:
+      test: curl --cacert /usr/share/elasticsearch/config/certs/ca/ca.crt -s https://elastic.dcloud.cisco.com:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${TAG}
+    container_name: kibana
+    secrets:
+      - source: kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+      - source: kibana.keystore
+        target: /usr/share/kibana/data/kibana.keystore
+      - source: ca.crt
+        target: /usr/share/kibana/config/certs/ca/ca.crt
+      - source: kibana.key
+        target: /usr/share/kibana/config/certs/kibana/kibana.key
+      - source: kibana.crt
+        target: /usr/share/kibana/config/certs/kibana/kibana.crt
+    ports: ['5601:5601']
+    networks: ['stack']
+    depends_on: ['elasticsearch']
+    healthcheck:
+      test: curl --cacert /usr/share/elasticsearch/config/certs/ca/ca.crt -s https://kibana.dcloud.cisco.com:5601 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${TAG}
+    container_name: logstash
+    secrets:
+      - source: logstash.conf
+        target: /usr/share/logstash/pipeline/logstash.conf
+      - source: logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+      - source: logstash.keystore
+        target: /usr/share/logstash/config/logstash.keystore
+      - source: ca.crt
+        target: /usr/share/logstash/config/certs/ca/ca.crt
+      - source: logstash.key
+        target: /usr/share/logstash/config/certs/logstash/logstash.key
+      - source: logstash.crt
+        target: /usr/share/logstash/config/certs/logstash/logstash.crt
+    ports: ['5515:5515']
+    networks: ['stack']
+    volumes:
+      - ./config/logstash/pattern:/usr/share/logstash/pattern
+    depends_on: ['elasticsearch']
+    healthcheck:
+      test: bin/logstash -t
+      interval: 60s
+      timeout: 50s
+      retries: 5
+
+networks: {stack: {}}
+
+# use docker volume to persist ES data outside of a container.
+volumes:
+  es_data:
+
+secrets:
+  ca.crt:
+    file: ./certs/ad1_ca.cer
+  logstash.yml:
+    file: ./config/logstash/logstash.yml
+  logstash.keystore:
+    file: ./config/logstash/logstash.keystore
+  logstash.conf:
+    file: ./config/logstash/pipeline/logstash.conf
+  logstash.key:
+    file: ./certs/elk_privkey.pem
+  logstash.crt:
+    file: ./certs/elk.cer
+  elasticsearch.yml:
+    file: ./config/elasticsearch/elasticsearch.yml
+  elasticsearch.keystore:
+    file: ./config/elasticsearch/elasticsearch.keystore
+  elasticsearch.key:
+    file: ./certs/elk_privkey.pem
+  elasticsearch.crt:
+    file: ./certs/elk.cer
+  elasticsearch.p12:
+    file: ./config/elasticsearch/elasticsearch.p12
+  kibana.yml:
+    file: ./config/kibana/kibana.yml
+  kibana.keystore:
+    file: ./config/kibana/kibana.keystore
+  kibana.key:
+    file: ./certs/elk_privkey.pem
+  kibana.crt:
+    file: ./certs/elk.cer
