@@ -1,0 +1,15 @@
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+
+[v3_req]
+
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = elk.dcloud.cisco.com
+DNS.2 = elastic.dcloud.cisco.com
+DNS.3 = kibana.dcloud.cisco.com
+DNS.4 = logstash.dcloud.cisco.com

@@ -85,6 +85,7 @@ services:
     networks: ['stack']
     volumes:
       - ./config/logstash/pattern:/usr/share/logstash/pattern
+      - ./config/logstash/template:/usr/share/logstash/template
     depends_on: ['elasticsearch']
     healthcheck:
       test: bin/logstash -t
