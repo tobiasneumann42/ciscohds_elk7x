@@ -81,7 +81,10 @@ services:
         target: /usr/share/logstash/config/certs/logstash/logstash.key
       - source: logstash.crt
         target: /usr/share/logstash/config/certs/logstash/logstash.crt
-    ports: ['5515:5515']
+    ports: 
+      - '5513:5513/udp'
+      - '5514:5514'
+      - '5515:5515'
     networks: ['stack']
     volumes:
       - ./config/logstash/pattern:/usr/share/logstash/pattern
