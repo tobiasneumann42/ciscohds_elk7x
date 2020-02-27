@@ -8,7 +8,7 @@ if [ -f "$confdir/elasticsearch/elasticsearch.keystore" ]; then
     rm "$confdir/elasticsearch/elasticsearch.keystore"
 fi
 
-PW=$(openssl rand -base64 16;)
+PW=C1sco12345
 ELASTIC_PASSWORD="${ELASTIC_PASSWORD:-$PW}"
 export ELASTIC_PASSWORD
 docker-compose -f docker-compose.yml -f docker-compose.setup.yml up setup_elasticsearch
